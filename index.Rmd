@@ -1,0 +1,229 @@
+---
+title: "Czech News"
+date: "Last updated `r format(Sys.time(),'%d. %m. %Y')`"
+author: "Ondrej Pekacek"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cosmo
+    orientation: columns
+    vertical_layout: fill
+    source_code: https://github.com/opop999/daily_media_headlines
+    navbar:
+      - {title: "Data: News API", icon: "ion-cloud", href: "https://newsapi.org/"}
+---
+
+```{r setup, include=FALSE}
+# Disable scientific notation of numbers
+options(scipen = 999)
+
+# Package names
+packages <- c("dplyr", "ggplot2", "plotly", "htmlwidgets", "stringr", "tidytext", "readr", "udpipe")
+
+# Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+# Directory where summary data were saved
+dir_name <- "data"
+
+# Import summary datasets
+yesterday_headlines <- readRDS(file = paste0(dir_name, "/yesterday_headlines.rds"))
+yesterday_query <- readRDS(file = paste0(dir_name, "/yesterday_query.rds"))
+
+# Specify output directory for individual word clouds
+directory <- "data/past_word_clouds"
+
+# Check whether output directory exists to save individual plots
+if (!dir.exists(directory)) {
+  dir.create(directory)
+} else {
+  print("Output directory already exists")
+}
+
+# Tokenize text ------------------------------------------------------
+
+tokenized_headlines <- yesterday_headlines %>% 
+  unnest_tokens(input = text, output = tokens, token = "words", to_lower = TRUE)
+
+tokenized_query <- yesterday_query %>% 
+  unnest_tokens(input = text, output = tokens, token = "words", to_lower = TRUE)
+
+# Clean tokens ------------------------------------------------------
+
+if (!file.exists(paste0(dir_name, "/czech_stopwords.txt"))) {
+  download.file(url = "https://raw.githubusercontent.com/stopwords-iso/stopwords-cs/master/stopwords-cs.txt", destfile = paste0(dir_name, "/czech_stopwords.txt"))
+} else {
+  print("Stopword list already exists")
+}
+
+stop_words_cz <- read_csv(file = paste0(dir_name, "/czech_stopwords.txt"), 
+  col_names = "tokens", col_types = "c")
+
+tokenized_headlines_clean <- tokenized_headlines %>%
+                anti_join(stop_words_cz) %>% 
+                filter(!str_detect(tokens, "^[0-9]"))
+
+tokenized_query_clean <- tokenized_query %>%
+                anti_join(stop_words_cz) %>% 
+                filter(!str_detect(tokens, "^[0-9]"))
+
+
+# Lemmatize tokens ------------------------------------------------------
+
+# Fitting the udpipe model with downloaded Czech model
+
+if (!file.exists(paste0(dir_name, "/czech-pdt-ud-2.5-191206.udpipe"))) {
+  udpipe_download_model(language = "czech-pdt", model_dir = dir_name)
+} else {
+  print("Udpipe model already exists")
+}
+
+lemma_headlines_clean <- udpipe(x = tokenized_headlines_clean$tokens, object = paste0(dir_name, "/czech-pdt-ud-2.5-191206.udpipe")) %>% 
+  select(lemma)
+
+lemma_query_clean <- udpipe(x = tokenized_query_clean$tokens, object = paste0(dir_name, "/czech-pdt-ud-2.5-191206.udpipe")) %>% 
+  select(lemma)
+
+
+# Separate by sentiment ------------------------------------------------------
+
+if (!file.exists(paste0(dir_name, "/czech_sentiment_lexicon.csv"))) {
+  download.file(url = "https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11858/00-097C-0000-0022-FF60-B/sublex_1_0.csv?sequence=1&isAllowed=y", destfile = paste0(dir_name, "/czech_sentiment_lexicon.csv"))
+} else {
+  print("Sentiment lexicon already exists")
+}
+
+sentiment_lexicon_cz <- read_delim(paste0(dir_name, "/czech_sentiment_lexicon.csv"),
+                           "\t", 
+                           escape_double = FALSE, 
+                           col_names = FALSE,
+                           col_types = "ccccc",
+                           trim_ws = TRUE) %>% 
+                           transmute(lemma = str_remove(X3, pattern = "_.*"),
+                                     sentiment = X4) 
+                           
+lemma_headlines_clean_pos <- sentiment_lexicon_cz %>% 
+                                filter(sentiment == "POS") %>% 
+                                inner_join(lemma_headlines_clean) %>% 
+                                select(-sentiment) %>% 
+                                count(lemma, sort = TRUE) %>% 
+                                ungroup()
+
+lemma_headlines_clean_neg <- sentiment_lexicon_cz %>% 
+                                filter(sentiment == "NEG") %>% 
+                                inner_join(lemma_headlines_clean) %>% 
+                                select(-sentiment) %>% 
+                                count(lemma, sort = TRUE) %>% 
+                                ungroup()
+
+lemma_query_clean_pos <- sentiment_lexicon_cz %>% 
+                                filter(sentiment == "POS") %>% 
+                                inner_join(lemma_query_clean) %>% 
+                                select(-sentiment) %>% 
+                                count(lemma, sort = TRUE) %>% 
+                                ungroup()
+
+lemma_query_clean_neg <- sentiment_lexicon_cz %>% 
+                                filter(sentiment == "NEG") %>% 
+                                inner_join(lemma_query_clean) %>% 
+                                select(-sentiment) %>% 
+                                count(lemma, sort = TRUE) %>% 
+                                ungroup()
+
+
+```
+
+Column {.tabset}
+-----------------------------------------------------------------------
+
+### **TOTAL POSTS ON PUBLIC FACEBOOK PAGES**
+
+```{r}
+plot_summary_dataset_fb <- ggplotly(
+  summary_dataset_fb %>%
+    ggplot(aes(x = total_posts, y = reorder(entity_name, total_posts), fill = words_per_post)) +
+    geom_col() +
+    scale_fill_gradient2(
+      low = "#6885c1", high = "#4267B2",
+    ) +
+    scale_x_continuous(
+      breaks = seq(0, 10000, 250),
+      labels = seq(0, 10000, 250)
+    ) +
+    scale_y_discrete(labels = (levels(reorder(summary_dataset_fb$entity_name, summary_dataset_fb$total_posts)) %>%
+      str_replace_all(pattern = "([^a-zA-Z])", replacement = " ") %>%
+      str_trim() %>%
+      str_to_title())) +
+    theme_minimal() +
+    ylab(element_blank()) +
+    xlab("Total Posts") +
+    labs(fill = "Words per Post") +
+    ggtitle(paste("Total FB posts since", format(start_date, "%d.%m.%Y")))
+)
+
+plot_summary_dataset_fb
+
+htmlwidgets::saveWidget(plot_summary_dataset_fb, file = paste0(directory, "/plot_summary_dataset_fb.html"))
+
+```
+
+### **PROPORTION OF SPONSORED FACEBOOK POSTS**
+
+```{r}
+plot_summary_dataset_fb_sponsored <- ggplotly(
+  summary_dataset_fb %>%
+    ggplot(aes(x = proportion_sponsored, y = reorder(entity_name, proportion_sponsored), fill = proportion_sponsored)) +
+    geom_col() +
+    geom_vline(aes(xintercept = 0.5, color = "#db0b50")) +
+    scale_fill_continuous(
+      low = "#a4b6da",
+      high = "#4267B2",
+    ) +
+    scale_y_discrete(labels = (levels(reorder(summary_dataset_fb$entity_name, summary_dataset_fb$proportion_sponsored)) %>%
+      str_replace_all(pattern = "([^a-zA-Z])", replacement = " ") %>%
+      str_trim() %>%
+      str_to_title())) +
+    scale_x_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, 0.1),
+      labels = c("0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%")
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    xlab("Proportion sponsored posts (texts also appear in the FB Ads library)") +
+    ylab(element_blank()) +
+    ggtitle(paste("Proportion of sponsored posts of FB accounts in Hlidac Statu dataset since", format(start_date, "%d.%m.%Y")))
+)
+
+plot_summary_dataset_fb_sponsored
+
+htmlwidgets::saveWidget(plot_summary_dataset_fb_sponsored, file = paste0(directory, "/plot_summary_dataset_fb_sponsored.html"))
+
+```
+
+```{r cleanup, include=FALSE}
+# Because the saveWidget function does not correctly delete the dependency files
+# which are used to create individual self-sustaining widgets, we have to delete
+# them using R functions. All non-html files in output folder are deleted.
+
+unlink(
+  grep(
+  x = 
+    list.files(
+    path = directory,
+    recursive = TRUE,
+    full.names = TRUE,
+  ),
+  pattern = "(.html)$",
+  invert = TRUE,
+  value = TRUE
+))
+
+```
+
+
