@@ -1,5 +1,7 @@
-# daily_media_headlines
+# Daily media headlines
 
-1. Script extract headlines
-2. Analyze text - remove stopwords, tokenization (unigrams/bigrams), lemmatization
-3. Visualize as WordCloud within a flexdashboard, save output as a jpg in a separate folder with a date name
+This project extracts Czech news headlines from yesterday (all headlines and headlines related to the "election" key word). 
+
+The extracted text is processed, tokenized and stop words are removed. Furthermore, the tokens are lemmatized and these lemma are then used for lexical sentiment analysis.
+
+The end-results is a series of WordCloud visualizations available within a dashboard embedded in the GitHub site. 
