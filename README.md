@@ -2,6 +2,8 @@
 
 # Daily media headlines
 
+## GOAL: One can spend the entire morning going through the news coverage and headlines from different media outlets. What if we could automatize this process and get key insights from the daily headlines in the form of a visualization?
+
 This project extracts Czech news headlines from yesterday (all headlines and headlines related to the "election" key word). 
 
 The extracted text is processed, tokenized and stop words are removed. Furthermore, the tokens are lemmatized and these lemma are then used for lexical sentiment analysis.
