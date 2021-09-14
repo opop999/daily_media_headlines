@@ -23,6 +23,11 @@ jobs:
       env:
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
       run: Rscript 01_get_news.R
+    - name: Extract weather through API
+    # This action needs a OpenWeatherMap API token as an environment variable
+      env:
+          OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+      run: Rscript 03_get_weather.R
     - name: Install Flexdashboard package
       run: Rscript -e "install.packages('flexdashboard')"
     - name: Update Dashboard for GitHub Pages  

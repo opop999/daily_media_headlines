@@ -4,7 +4,7 @@ date: "Last updated `r format(Sys.time(),'%d. %m. %Y')`"
 author: "Ondrej Pekacek"
 output: 
   flexdashboard::flex_dashboard:
-    theme: journal
+    theme: cosmo
     orientation: columns
     vertical_layout: fill
     source_code: https://github.com/opop999/daily_media_headlines
@@ -17,7 +17,7 @@ output:
 options(scipen = 999)
 
 # Package names
-packages <- c("dplyr", "stringr", "tidytext", "readr", "udpipe", "wordcloud")
+packages <- c("dplyr", "stringr", "tidytext", "readr", "udpipe", "wordcloud", "owmr", "gganimate")
 
 # Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -42,9 +42,12 @@ word_cloud_list <- transform_news_text(dir_name = dir_name, dir_name_out = dir_n
 #Define a color palette for the Word Cloud
 palette <- brewer.pal(9, "YlOrBr")
 
+#Load weather forecats dataset
+forecast_df <- readRDS("data/weather_forecast.rds")
+
 ```
 
-Column {.tabset}
+Column {.tabset data-width=400}
 -----------------------------------------------------------------------
 
 ### **NEWS HEADLINES**
@@ -88,9 +91,6 @@ word_cloud_list$lemma_headlines_clean_pos %>% with(wordcloud(lemma,
 
 ```
 
-Column {.tabset}
------------------------------------------------------------------------
-
 ### **ELECTION HEADLINES**
 ```{r}
 set.seed(2021)
@@ -127,6 +127,38 @@ word_cloud_list$lemma_query_clean_pos %>% with(wordcloud(lemma,
                                 min.freq = 1, 
                                 max.words = 100, 
                                 colors = palette))
+
+```
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### **PRAGUE WEATHER FORECAST**
+
+```{r}
+animated_temp <- forecast_df %>%
+  mutate(dt_txt = as.POSIXct(dt_txt, format = "%Y-%m-%d %H:%M:%S", tz = Sys.timezone())) %>%
+  ggplot(aes(x = dt_txt, y = temp, color = humidity)) +
+  geom_line() +
+  scale_y_continuous(breaks = seq(0, 50, 1),
+                       labels = seq(0, 50, 1)) +
+  labs(x = "Date", y = "Temperature") +
+  theme_minimal() +
+  scale_x_datetime(date_breaks = "6 hours", date_labels = "%d %b - %H:%M") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(color = "Humidity") +
+  scale_color_gradient(
+    low = "brown4",
+    high = "blue4",
+    limits = c(0, 100),
+    breaks = seq(0, 100, 20),
+    labels = c("0%", "20%", "40%", "60%", "80%", "100%")
+  ) +
+  ggtitle(paste("Temperature and Humidity forecast for Prague from", format(Sys.Date(),'%d.%m.%Y'), "to", format(Sys.Date() + 5,'%d.%m.%Y'))) +
+  transition_reveal(dt_txt)
+  
+# Select animation size
+animate(animated_temp, height = 720, width = 1280, fps = 15)
 
 ```
 
