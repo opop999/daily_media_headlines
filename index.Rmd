@@ -17,7 +17,7 @@ output:
 options(scipen = 999)
 
 # Package names
-packages <- c("dplyr", "stringr", "tidytext", "readr", "udpipe", "wordcloud", "gganimate")
+packages <- c("dplyr", "stringr", "tidytext", "readr", "udpipe", "wordcloud", "gganimate", "gifski")
 
 # Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
