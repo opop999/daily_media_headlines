@@ -32,6 +32,8 @@ jobs:
       run: Rscript -e "install.packages('flexdashboard')"
     - name: Update Dashboard for GitHub Pages  
       run: Rscript -e "rmarkdown::render('index.Rmd')"
+    - name: Print information about the warnings
+      run: Rscript -e "warnings()" 
     - name: Print information about the session
       run: Rscript -e "sessionInfo()"
     
