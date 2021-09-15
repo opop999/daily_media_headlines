@@ -10,6 +10,7 @@ output:
     source_code: https://github.com/opop999/daily_media_headlines
     navbar:
       - {title: "Data: News API", icon: "ion-cloud", href: "https://newsapi.org/"}
+      - {title: "Data: OpenWeatherMaps API", icon: "ion-cloud", href: "https://openweathermap.org/api"}
 ---
 
 ```{r setup, include=FALSE}
