@@ -10,4 +10,4 @@ The extracted text is processed, tokenized and stop words are removed. Furthermo
 
 The end-results is a series of WordCloud visualizations available within a dashboard embedded in the GitHub site. 
 
-As a bonus, we also get a graph with temperature/humidity forecast for Prague to compare whether there is a link between weather and media discourse. :=)
+As a bonus, we also get a graph with temperature/humidity forecast for Prague to compare whether there is a link between weather and media discourse. :smirk:
