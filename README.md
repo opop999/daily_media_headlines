@@ -9,3 +9,5 @@ This project extracts Czech news headlines from yesterday (all headlines and hea
 The extracted text is processed, tokenized and stop words are removed. Furthermore, the tokens are lemmatized and these lemma are then used for lexical sentiment analysis.
 
 The end-results is a series of WordCloud visualizations available within a dashboard embedded in the GitHub site. 
+
+As a bonus, we also get a graph with temperature/humidity forecast for Prague to compare whether there is a link between weather and media discourse. :=)
